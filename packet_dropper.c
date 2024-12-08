@@ -16,9 +16,6 @@ MODULE_AUTHOR("HDR");
 MODULE_DESCRIPTION("packet dropper");
 MODULE_VERSION("0.01");
 
-// static struct nf_hook_ops pre_routing_nfho;
-// static struct nf_hook_ops forward_nfho;
-
 struct rule post_routing_rules[] = {
     {
         {
@@ -197,40 +194,8 @@ void print_rules(struct rule* rules, int rule_count) {
     }
 }
 
-// int register_routing_hook(struct nf_hook_ops *nfho, enum nf_inet_hooks hooknum, enum nf_ip_hook_priorities priority, struct rule *rules, int rule_count) {
-//     memset(nfho, 0, sizeof(struct nf_hook_ops));
-//     memset(&params, 0, sizeof(struct nf_hook_params));
-
-//     params.rules = rules;
-//     params.rule_count = rule_count;
-
-//     nfho->hook = filter_packet;
-//     nfho->pf = PF_INET;
-//     nfho->hooknum = hooknum;
-//     nfho->priority = priority;
-//     nfho->priv = &params;
-
-//     if (nf_register_net_hook(&init_net, nfho)) {
-//         printk(KERN_ERR "Failed to register Netfilter hook\n");
-//         return -1;
-//     }
-
-//     print_rules(rules, rule_count);
-
-//     return 0;
-// }
-
 static int __init rootkit_init(void)
 {
-    
-    //register_routing_hook(&forward_nfho, NF_INET_POST_ROUTING, NF_IP_PRI_LAST, (struct rule *)post_routing_rules, sizeof(post_routing_rules) / sizeof(struct rule));
-    //register_routing_hook(&pre_routing_nfho, NF_INET_PRE_ROUTING, NF_IP_PRI_FIRST, (struct rule *)pre_routing_rules, sizeof(pre_routing_rules) / sizeof(struct rule));
-
-    // struct nf_hook_ops hooks[] = {
-    //     forward_nfho,
-    //     pre_routing_nfho,
-    // };
-
     nf_register_net_hooks(&init_net, nf_ops, ARRAY_SIZE(nf_ops));
 
     printk(KERN_INFO "rootkit: loaded\n");
@@ -239,8 +204,6 @@ static int __init rootkit_init(void)
 
 static void __exit rootkit_exit(void)
 {
-    // nf_unregister_net_hook(&init_net, &pre_routing_nfho);
-    // nf_unregister_net_hook(&init_net, &forward_nfho);
     nf_unregister_net_hooks(&init_net, nf_ops, ARRAY_SIZE(nf_ops));
 
     printk(KERN_INFO "rootkit: unloaded\n");
