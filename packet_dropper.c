@@ -3,6 +3,7 @@
 #include <linux/kernel.h>
 #include <linux/version.h>
 #include <linux/netfilter.h>
+#include <linux/netfilter_ipv4.h>
 #include <linux/ip.h>
 #include <linux/tcp.h>
 #include <linux/inet.h>
@@ -15,11 +16,10 @@ MODULE_AUTHOR("HDR");
 MODULE_DESCRIPTION("packet dropper");
 MODULE_VERSION("0.01");
 
-static struct nf_hook_ops *pre_routing_nfho;
-static struct nf_hook_ops *forward_nfho;
-struct nf_hook_params *params;
+// static struct nf_hook_ops pre_routing_nfho;
+// static struct nf_hook_ops forward_nfho;
 
-struct rule forward_rules[2] = {
+struct rule post_routing_rules[] = {
     {
         {
             {}, 
@@ -34,7 +34,7 @@ struct rule forward_rules[2] = {
         }
     }
 };
-struct rule pre_routing_rules[1] = {
+struct rule pre_routing_rules[] = {
     {
         {
             {ntohl(0xC0A81101), htons(8080)}, 
@@ -55,27 +55,39 @@ struct nf_hook_params {
     int rule_count;
 };
 
+struct nf_hook_params pre_routing_params = {
+    .rules = pre_routing_rules,
+    .rule_count = sizeof(pre_routing_rules) / sizeof(struct rule)
+};
+
+struct nf_hook_params post_routing_params = {
+    .rules = post_routing_rules,
+    .rule_count = sizeof(post_routing_rules) / sizeof(struct rule)
+};
+
 struct rule *is_match(struct rule* rules, int rule_count, struct iphdr *ip_header, struct tcphdr *tcp_header) {
     unsigned int i;
     for (i = 0; i < rule_count; i++) {
         struct rule *rule = &rules[i];
-        if (rule->filter.src.ip && rule->filter.src.ip == ip_header->saddr) {
-            return rule;
+        if (rule->filter.src.ip && rule->filter.src.ip != ip_header->saddr) {
+            continue;
         }
-        else if (rule->filter.src.port && rule->filter.src.port == tcp_header->source) {
-            return rule;
+        else if (rule->filter.src.port && rule->filter.src.port != tcp_header->source) {
+            continue;
         }
-        else if (rule->filter.dst.ip && rule->filter.dst.ip == ip_header->daddr) {
-            return rule;
+        else if (rule->filter.dst.ip && rule->filter.dst.ip != ip_header->daddr) {
+            continue;
         }
-        else if (rule->filter.dst.port && rule->filter.dst.port == tcp_header->dest) {
-            return rule;
+        else if (rule->filter.dst.port && rule->filter.dst.port != tcp_header->dest) {
+            continue;
         }
+        return rule;
     }
     return NULL;
 }
 
 unsigned int filter_packet(void *priv, struct sk_buff *skb, const struct nf_hook_state *state) {
+    //struct ethhdr *eth_header;
     struct iphdr *ip_header;
     struct tcphdr *tcp_header;
     struct rule *matched_rule;
@@ -92,6 +104,7 @@ unsigned int filter_packet(void *priv, struct sk_buff *skb, const struct nf_hook
     }
 
     tcp_header = tcp_hdr(skb);
+    //eth_header = eth_hdr(skb);
     
     matched_rule = is_match(params->rules, params->rule_count, ip_header, tcp_header);
     if (matched_rule) {
@@ -114,6 +127,7 @@ unsigned int filter_packet(void *priv, struct sk_buff *skb, const struct nf_hook
         case ALTER:
             printk(KERN_INFO "Changing packet destined for \n");
             if (matched_rule->action.filter.src.ip) {
+                printk(KERN_INFO "Changing packet src ip to %d\n", matched_rule->action.filter.src.ip);
                 ip_header->saddr = matched_rule->action.filter.src.ip;
             }
             if (matched_rule->action.filter.src.port) {
@@ -149,6 +163,23 @@ unsigned int filter_packet(void *priv, struct sk_buff *skb, const struct nf_hook
     return NF_ACCEPT;
 }
 
+static struct nf_hook_ops nf_ops[] = {
+    {
+        .hook = filter_packet,
+        .pf = NFPROTO_IPV4,
+        .hooknum = NF_INET_PRE_ROUTING,
+        .priority = NF_IP_PRI_NAT_DST,
+        .priv = &pre_routing_params
+    },
+    {
+        .hook = filter_packet,
+        .pf = NFPROTO_IPV4,
+        .hooknum = NF_INET_POST_ROUTING,
+        .priority = NF_IP_PRI_NAT_SRC,
+        .priv = &post_routing_params
+    }
+};
+
 void print_rules(struct rule* rules, int rule_count) {
     unsigned int i = 0;
     for (i = 0; i < rule_count; i++)
@@ -166,33 +197,41 @@ void print_rules(struct rule* rules, int rule_count) {
     }
 }
 
-int register_routing_hook(struct nf_hook_ops *nfho, enum nf_inet_hooks hooknum, struct rule * rules, int rule_count) {
-    memset(nfho, 0, sizeof(struct nf_hook_ops));
-    memset(params, 0, sizeof(struct nf_hook_params));
+// int register_routing_hook(struct nf_hook_ops *nfho, enum nf_inet_hooks hooknum, enum nf_ip_hook_priorities priority, struct rule *rules, int rule_count) {
+//     memset(nfho, 0, sizeof(struct nf_hook_ops));
+//     memset(&params, 0, sizeof(struct nf_hook_params));
 
-    params->rules = rules;
-    params->rule_count = rule_count;
+//     params.rules = rules;
+//     params.rule_count = rule_count;
 
-    nfho->hook = filter_packet;
-    nfho->pf = PF_INET;
-    nfho->hooknum = hooknum;
-    nfho->priority = 0;
-    nfho->priv = params;
+//     nfho->hook = filter_packet;
+//     nfho->pf = PF_INET;
+//     nfho->hooknum = hooknum;
+//     nfho->priority = priority;
+//     nfho->priv = &params;
 
-    if (nf_register_net_hook(&init_net, nfho)) {
-        printk(KERN_ERR "Failed to register Netfilter hook\n");
-        return -1;
-    }
+//     if (nf_register_net_hook(&init_net, nfho)) {
+//         printk(KERN_ERR "Failed to register Netfilter hook\n");
+//         return -1;
+//     }
 
-    print_rules(rules, rule_count);
+//     print_rules(rules, rule_count);
 
-    return 0;
-}
+//     return 0;
+// }
 
 static int __init rootkit_init(void)
 {
-    register_routing_hook(pre_routing_nfho, NF_INET_PRE_ROUTING, pre_routing_rules, sizeof(pre_routing_nfho) / sizeof(struct rule));
-    register_routing_hook(forward_nfho, NF_INET_FORWARD, forward_rules, sizeof(forward_rules) / sizeof(struct rule));
+    
+    //register_routing_hook(&forward_nfho, NF_INET_POST_ROUTING, NF_IP_PRI_LAST, (struct rule *)post_routing_rules, sizeof(post_routing_rules) / sizeof(struct rule));
+    //register_routing_hook(&pre_routing_nfho, NF_INET_PRE_ROUTING, NF_IP_PRI_FIRST, (struct rule *)pre_routing_rules, sizeof(pre_routing_rules) / sizeof(struct rule));
+
+    // struct nf_hook_ops hooks[] = {
+    //     forward_nfho,
+    //     pre_routing_nfho,
+    // };
+
+    nf_register_net_hooks(&init_net, nf_ops, ARRAY_SIZE(nf_ops));
 
     printk(KERN_INFO "rootkit: loaded\n");
     return 0;
@@ -200,8 +239,10 @@ static int __init rootkit_init(void)
 
 static void __exit rootkit_exit(void)
 {
-    nf_unregister_net_hook(&init_net, pre_routing_nfho);
-    nf_unregister_net_hook(&init_net, forward_nfho);
+    // nf_unregister_net_hook(&init_net, &pre_routing_nfho);
+    // nf_unregister_net_hook(&init_net, &forward_nfho);
+    nf_unregister_net_hooks(&init_net, nf_ops, ARRAY_SIZE(nf_ops));
+
     printk(KERN_INFO "rootkit: unloaded\n");
 }
 
