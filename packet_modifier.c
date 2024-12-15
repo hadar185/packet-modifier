@@ -13,7 +13,7 @@
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("HDR");
-MODULE_DESCRIPTION("packet dropper");
+MODULE_DESCRIPTION("Modifies packets by given rules");
 MODULE_VERSION("0.01");
 
 struct rule post_routing_rules[] = {
@@ -66,19 +66,13 @@ struct rule *is_match(struct rule* rules, int rule_count, struct iphdr *ip_heade
     unsigned int i;
     for (i = 0; i < rule_count; i++) {
         struct rule *rule = &rules[i];
-        if (rule->filter.src.ip && rule->filter.src.ip != ip_header->saddr) {
-            continue;
+        if ((!rule->filter.src.ip || rule->filter.src.ip == ip_header->saddr) &&
+            (!rule->filter.src.port || rule->filter.src.port == tcp_header->source) &&
+            (!rule->filter.dst.ip || rule->filter.dst.ip == ip_header->daddr) &&
+            (!rule->filter.dst.port || rule->filter.dst.port == tcp_header->dest)) 
+        {
+            return rule;
         }
-        else if (rule->filter.src.port && rule->filter.src.port != tcp_header->source) {
-            continue;
-        }
-        else if (rule->filter.dst.ip && rule->filter.dst.ip != ip_header->daddr) {
-            continue;
-        }
-        else if (rule->filter.dst.port && rule->filter.dst.port != tcp_header->dest) {
-            continue;
-        }
-        return rule;
     }
     return NULL;
 }
