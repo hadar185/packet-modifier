@@ -1,5 +1,3 @@
-#include "rule.h"
-#include "packet.h"
 #include "packet_modifier.h"
 
 struct nf_hook_params pre_routing_params = {
@@ -12,45 +10,38 @@ struct nf_hook_params post_routing_params = {
     .rule_count = ARRAY_SIZE(post_routing_rules)
 };
 
-struct rule *is_match(struct rule* rules, int rule_count, struct packet *packet) {
-    unsigned int i;
-    for (i = 0; i < rule_count; i++) {
-        struct rule *rule = &rules[i];
-        if ((!rule->filter.src.ip || rule->filter.src.ip == packet->ip_header->saddr) &&
-            (!rule->filter.src.port || rule->filter.src.port == packet->layer4.tcp_header->source) &&
-            (!rule->filter.dst.ip || rule->filter.dst.ip == packet->ip_header->daddr) &&
-            (!rule->filter.dst.port || rule->filter.dst.port == packet->layer4.tcp_header->dest)) 
+bool is_match(struct packet *packet, struct rule *rule) {
+    if ((!rule->filter.src.ip || rule->filter.src.ip == packet->ip_header->saddr) &&
+        (!rule->filter.dst.ip || rule->filter.dst.ip == packet->ip_header->daddr))
+    {
+        switch (packet->ip_header->protocol)
         {
+            case IPPROTO_TCP:
+                if ((!rule->filter.src.port || rule->filter.src.port == packet->layer4.tcp_header->source) &&
+                    (!rule->filter.dst.port || rule->filter.dst.port == packet->layer4.tcp_header->dest)) 
+                {
+                    return true;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    return false;
+}
+
+struct rule *get_matching_rule(struct packet *packet, struct rule* rules, int rule_count) {
+    unsigned int rule_index;
+    for (rule_index = 0; rule_index < rule_count; rule_index++) {
+        struct rule *rule = &rules[rule_index];
+        if (is_match(packet, rule)) {
             return rule;
         }
     }
     return NULL;
 }
 
-void modify_packet(struct rule *matched_rule, struct packet *packet) {
-    if (matched_rule->action.filter.src.ip) {
-        packet->ip_header->saddr = matched_rule->action.filter.src.ip;
-    }
-    if (matched_rule->action.filter.dst.ip) {
-        packet->ip_header->daddr = matched_rule->action.filter.dst.ip;
-    }
-    switch (packet->ip_header->protocol)
-    {
-        case IPPROTO_TCP:
-            if (matched_rule->action.filter.src.port) {
-                packet->layer4.tcp_header->source = matched_rule->action.filter.src.port;
-            }
-            if (matched_rule->action.filter.dst.port) {
-                packet->layer4.tcp_header->dest = matched_rule->action.filter.dst.port;
-            }
-            break;
-        default:
-            break;
-    }
-    recalculate_checksum(packet);
-}
-
-int handle_packet(struct rule *matched_rule, struct packet *packet) {
+int handle_packet(struct packet *packet, struct rule *matched_rule) {
     switch (matched_rule->action.action_type)
     {
         case DROP:
@@ -58,7 +49,7 @@ int handle_packet(struct rule *matched_rule, struct packet *packet) {
             return NF_DROP;
         case MODIFY:
             printk(KERN_INFO "Changing packet destined for \n");
-            modify_packet(matched_rule, packet);
+            modify_packet(packet, matched_rule);
             break;
         default:
             break;
@@ -66,21 +57,17 @@ int handle_packet(struct rule *matched_rule, struct packet *packet) {
     return NF_ACCEPT;
 }
 
-unsigned int filter_packet(void *priv, struct sk_buff *skb, const struct nf_hook_state *state) {
+unsigned int packet_hook(void *priv, struct sk_buff *skb, const struct nf_hook_state *state) {
+    struct nf_hook_params *params = (struct nf_hook_params *)priv;
+    struct packet packet = to_packet(skb);
     struct rule *matched_rule;
 
-    struct nf_hook_params *params = (struct nf_hook_params *)priv;
-
-    struct packet packet = to_packet(skb);
-
-    if (!packet.ip_header || packet.ip_header->protocol != IPPROTO_TCP) {
-        return NF_ACCEPT;
-    }
-    
-    matched_rule = is_match(params->rules, params->rule_count, &packet);
-    if (matched_rule) {
-        print_packet(&packet);
-        return handle_packet(matched_rule, &packet);
+    if (packet.ip_header) {
+        matched_rule = get_matching_rule(&packet, params->rules, params->rule_count);
+        if (matched_rule) {
+            print_packet(&packet);
+            return handle_packet(&packet, matched_rule);
+        }
     }
 
     return NF_ACCEPT;
@@ -88,14 +75,14 @@ unsigned int filter_packet(void *priv, struct sk_buff *skb, const struct nf_hook
 
 static struct nf_hook_ops nf_ops[] = {
     {
-        .hook = filter_packet,
+        .hook = packet_hook,
         .pf = NFPROTO_IPV4,
         .hooknum = NF_INET_PRE_ROUTING,
         .priority = NF_IP_PRI_NAT_DST,
         .priv = &pre_routing_params
     },
     {
-        .hook = filter_packet,
+        .hook = packet_hook,
         .pf = NFPROTO_IPV4,
         .hooknum = NF_INET_POST_ROUTING,
         .priority = NF_IP_PRI_NAT_SRC,

@@ -28,6 +28,5 @@ struct rule {
     struct action action;
 };
 
-// int format_rule(struct rule *rule, char *buffer, unsigned int size);
 void print_rule(struct rule *rule);
 void print_rules(struct rule *rules, int rule_count);

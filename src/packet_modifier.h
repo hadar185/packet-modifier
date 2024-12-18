@@ -9,6 +9,9 @@
 #include <linux/inet.h>
 #include <net/checksum.h>
 
+#include "rule.h"
+#include "packet.h"
+
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("HDR");
 MODULE_DESCRIPTION("Modifies packets by given rules");
@@ -50,10 +53,10 @@ struct nf_hook_params {
     int rule_count;
 };
 
-struct rule *is_match(struct rule* rules, int rule_count, struct packet *packet);
-unsigned int filter_packet(void *priv, struct sk_buff *skb, const struct nf_hook_state *state);
-void modify_packet(struct rule *matched_rule, struct packet *packet);
-int handle_packet(struct rule *matched_rule, struct packet *packet);
+bool is_match(struct packet *packet, struct rule *rule);
+struct rule *get_matching_rule(struct packet *packet, struct rule* rules, int rule_count);
+int handle_packet(struct packet *packet, struct rule *matched_rule);
+unsigned int packet_hook(void *priv, struct sk_buff *skb, const struct nf_hook_state *state);
 
 static int __init rootkit_init(void);
 static void __exit rootkit_exit(void);
