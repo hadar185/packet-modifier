@@ -8,7 +8,7 @@ unsigned int packet_hook(void *priv, struct sk_buff *skb, const struct nf_hook_s
     if (packet.ip_header) {
         matched_rule = get_matching_rule(&packet, params->rules, params->rule_count);
         if (matched_rule) {
-            print_packet(&packet, KERN_INFO "Packet %d:%d to %d:%d matched a rule");
+            print_packet(&packet, KERN_INFO "Packet %pI4:%u to %pI4:%u matched a rule");
             return handle_packet(&packet, matched_rule);
         }
     }

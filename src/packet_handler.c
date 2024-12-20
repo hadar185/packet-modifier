@@ -1,7 +1,7 @@
 #include "packet_handler.h"
 
 
-bool is_match(Packet *packet, Rule *rule) {
+bool is_match(struct packet *packet, Rule *rule) {
     if ((!rule->filter.src.ip || rule->filter.src.ip == packet->ip_header->saddr) &&
         (!rule->filter.dst.ip || rule->filter.dst.ip == packet->ip_header->daddr))
     {
@@ -21,7 +21,7 @@ bool is_match(Packet *packet, Rule *rule) {
     return false;
 }
 
-Rule *get_matching_rule(Packet *packet, Rule* rules, int rule_count) {
+Rule *get_matching_rule(struct packet *packet, Rule* rules, int rule_count) {
     unsigned int rule_index;
     for (rule_index = 0; rule_index < rule_count; rule_index++) {
         Rule *rule = &rules[rule_index];
@@ -32,7 +32,7 @@ Rule *get_matching_rule(Packet *packet, Rule* rules, int rule_count) {
     return NULL;
 }
 
-unsigned int handle_packet(Packet *packet, Rule *matched_rule) {
+unsigned int handle_packet(struct packet *packet, Rule *matched_rule) {
     switch (matched_rule->action.action_type)
     {
         case DROP:

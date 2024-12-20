@@ -4,8 +4,8 @@
 #include <linux/kernel.h>
 
 struct address {
-    int ip;
-    int port;
+    __be32 ip;
+    __be16 port;
 };
 
 struct filter {
@@ -28,5 +28,5 @@ typedef const struct rule {
     struct action action;
 } Rule;
 
-void print_rule(struct rule *rule);
-void print_rules(struct rule *rules, int rule_count);
+void print_rule(Rule *rule);
+void print_rules(Rule *rules, int rule_count);

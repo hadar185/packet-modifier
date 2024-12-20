@@ -2,15 +2,15 @@
 
 void print_rule(Rule *rule) {
     printk(
-        KERN_INFO "Rule: filter: %d:%d to %d:%d action: %d:%d to %d:%d",
-        rule->filter.src.ip,
-        rule->filter.src.port,
-        rule->filter.dst.ip,
-        rule->filter.dst.port,
-        rule->action.filter.src.ip,
-        rule->action.filter.src.port,
-        rule->action.filter.dst.ip,
-        rule->action.filter.dst.port
+        KERN_INFO "Rule: filter: %pI4:%u to %pI4:%u action: %pI4:%u to %pI4:%u",
+        &rule->filter.src.ip,
+        ntohs(rule->filter.src.port),
+        &rule->filter.dst.ip,
+        ntohs(rule->filter.dst.port),
+        &rule->action.filter.src.ip,
+        ntohs(rule->action.filter.src.port),
+        &rule->action.filter.dst.ip,
+        ntohs(rule->action.filter.dst.port)
     );
 }
 

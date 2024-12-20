@@ -64,9 +64,9 @@ void modify_packet(Packet *packet, Rule *matched_rule) {
 
 void print_packet(Packet *packet, char *message_format) {
     printk(message_format,
-        packet->ip_header->saddr,
-        packet->layer4.tcp_header->source,
-        packet->ip_header->daddr,
-        packet->layer4.tcp_header->dest
+        &packet->ip_header->saddr,
+        ntohs(packet->layer4.tcp_header->source),
+        &packet->ip_header->daddr,
+        ntohs(packet->layer4.tcp_header->dest)
     );
 }
