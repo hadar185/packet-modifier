@@ -23,10 +23,10 @@ struct action {
     struct filter filter;
 };
 
-struct rule {
+typedef const struct rule {
     struct filter filter;
     struct action action;
-};
+} Rule;
 
 void print_rule(struct rule *rule);
 void print_rules(struct rule *rules, int rule_count);

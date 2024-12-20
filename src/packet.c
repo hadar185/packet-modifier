@@ -1,8 +1,8 @@
 #include "packet.h"
 
 
-struct packet to_packet(struct sk_buff *skb) {
-    struct packet packet = {};
+Packet to_packet(struct sk_buff *skb) {
+    Packet packet = {};
 
     if (!skb) {
         return packet;
@@ -23,7 +23,7 @@ struct packet to_packet(struct sk_buff *skb) {
     return packet;
 }
 
-void modify_ip_header(struct packet *packet, struct rule *matched_rule) {
+void modify_ip_header(Packet *packet, Rule *matched_rule) {
     if (matched_rule->action.filter.src.ip) {
         packet->ip_header->saddr = matched_rule->action.filter.src.ip;
     }
@@ -34,7 +34,7 @@ void modify_ip_header(struct packet *packet, struct rule *matched_rule) {
     packet->ip_header->check = ip_fast_csum((unsigned char *)packet->ip_header, packet->ip_header->ihl);
 }
 
-void modify_tcp_header(struct packet *packet, struct rule *matched_rule) {
+void modify_tcp_header(Packet *packet, Rule *matched_rule) {
     if (matched_rule->action.filter.src.port) {
         packet->layer4.tcp_header->source = matched_rule->action.filter.src.port;
     }
@@ -50,7 +50,7 @@ void modify_tcp_header(struct packet *packet, struct rule *matched_rule) {
     );
 }
 
-void modify_packet(struct packet *packet, struct rule *matched_rule) {
+void modify_packet(Packet *packet, Rule *matched_rule) {
     modify_ip_header(packet, matched_rule);
     switch (packet->ip_header->protocol)
     {
@@ -62,8 +62,8 @@ void modify_packet(struct packet *packet, struct rule *matched_rule) {
     }
 }
 
-void print_packet(struct packet *packet) {
-    printk(KERN_INFO "Packet %d:%d to %d:%d matched a rule",
+void print_packet(Packet *packet, char *message_format) {
+    printk(message_format,
         packet->ip_header->saddr,
         packet->layer4.tcp_header->source,
         packet->ip_header->daddr,

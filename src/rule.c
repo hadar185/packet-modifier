@@ -1,6 +1,6 @@
 #include "rule.h"
 
-void print_rule(struct rule *rule) {
+void print_rule(Rule *rule) {
     printk(
         KERN_INFO "Rule: filter: %d:%d to %d:%d action: %d:%d to %d:%d",
         rule->filter.src.ip,
@@ -14,7 +14,7 @@ void print_rule(struct rule *rule) {
     );
 }
 
-void print_rules(struct rule *rules, int rule_count) {
+void print_rules(Rule *rules, int rule_count) {
     unsigned int i = 0;
     for (i = 0; i < rule_count; i++)
     {

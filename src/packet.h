@@ -12,13 +12,13 @@ union layer4
     struct tcphdr *tcp_header;
 };
 
-struct packet {
+typedef struct packet {
     struct iphdr *ip_header;
     union layer4 layer4;
-};
+} Packet;
 
-struct packet to_packet(struct sk_buff *skb);
-void modify_ip_header(struct packet *packet, struct rule *matched_rule);
-void modify_tcp_header(struct packet *packet, struct rule *matched_rule);
-void modify_packet(struct packet *packet, struct rule *matched_rule);
-void print_packet(struct packet *packet);
+Packet to_packet(struct sk_buff *skb);
+void modify_ip_header(Packet *packet, Rule *matched_rule);
+void modify_tcp_header(Packet *packet, Rule *matched_rule);
+void modify_packet(Packet *packet, Rule *matched_rule);
+void print_packet(Packet *packet, char *message_format);
