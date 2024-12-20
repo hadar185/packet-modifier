@@ -20,7 +20,8 @@ Rule post_routing_rules[1] = {
     {
         {
             {}, 
-            {ntohl(0xC0A81101), htons(8000)}
+            {ntohl(0xC0A81101), htons(8000)},
+            IPPROTO_TCP
         },
         {
             1, 
@@ -35,7 +36,8 @@ Rule pre_routing_rules[1] = {
     {
         {
             {ntohl(0xC0A81101), htons(8080)}, 
-            {}
+            {},
+            IPPROTO_TCP
         }, 
         {
             1, 

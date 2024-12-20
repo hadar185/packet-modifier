@@ -2,6 +2,7 @@
 
 #include <linux/init.h>
 #include <linux/kernel.h>
+#include <linux/in.h>
 
 struct address {
     __be32 ip;
@@ -11,6 +12,7 @@ struct address {
 struct filter {
     struct address src;
     struct address dst;
+    int protocol;
 };
 
 enum action_type {

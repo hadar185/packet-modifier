@@ -3,7 +3,8 @@
 
 bool is_match(struct packet *packet, Rule *rule) {
     if ((!rule->filter.src.ip || rule->filter.src.ip == packet->ip_header->saddr) &&
-        (!rule->filter.dst.ip || rule->filter.dst.ip == packet->ip_header->daddr))
+        (!rule->filter.dst.ip || rule->filter.dst.ip == packet->ip_header->daddr) &&
+        (!rule->filter.protocol || rule->filter.protocol == packet->ip_header->protocol))
     {
         switch (packet->ip_header->protocol)
         {
