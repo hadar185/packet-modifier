@@ -1,10 +1,11 @@
 #pragma once
 
+#include <linux/netfilter.h>
+#include <linux/netfilter_ipv4.h>
+
 #include "rule.h"
 #include "packet.h"
 #include "packet_handler.h"
-#include <linux/netfilter.h>
-#include <linux/netfilter_ipv4.h>
 
 struct nf_hook_params {
     Rule *rules;

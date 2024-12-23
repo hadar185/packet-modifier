@@ -22,8 +22,10 @@ bool is_match(struct packet *packet, Rule *rule) {
     return false;
 }
 
-Rule *get_matching_rule(struct packet *packet, Rule* rules, int rule_count) {
+Rule *get_matching_rule(struct packet *packet, Rule *rules, int rule_count) {
     unsigned int rule_index;
+
+    // The rules are currently static, therefore the rules can be accessed without any lock
     for (rule_index = 0; rule_index < rule_count; rule_index++) {
         Rule *rule = &rules[rule_index];
         if (is_match(packet, rule)) {

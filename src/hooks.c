@@ -8,7 +8,7 @@ unsigned int packet_hook(void *priv, struct sk_buff *skb, const struct nf_hook_s
     if (packet.ip_header) {
         matched_rule = get_matching_rule(&packet, params->rules, params->rule_count);
         if (matched_rule) {
-            print_packet(&packet, KERN_INFO "Packet %pI4:%u to %pI4:%u matched a rule");
+            print_packet(&packet, KERN_INFO "Packet %pI4:%u to %pI4:%u matched a rule\n");
             return handle_packet(&packet, matched_rule);
         }
     }
@@ -17,14 +17,16 @@ unsigned int packet_hook(void *priv, struct sk_buff *skb, const struct nf_hook_s
 }
 
 Rule post_routing_rules[1] = {
+    // DNAT - Changes the destination port from 8000 to 8080
     {
+        // The filter matches any TCP packets originating from the specified source ip and port
         {
             {}, 
             {ntohl(0xC0A81101), htons(8000)},
             IPPROTO_TCP
         },
         {
-            1, 
+            MODIFY, 
             {
                 {ntohl(0xC0A81180)},
                 {ntohl(0xC0A81101), htons(8080)}
@@ -33,14 +35,16 @@ Rule post_routing_rules[1] = {
     }
 };
 Rule pre_routing_rules[1] = {
+    // SNAT - Changes the source port back from 8080 to 8000
     {
+        // The filter matches any TCP packets originating from the specified source ip and port
         {
             {ntohl(0xC0A81101), htons(8080)}, 
             {},
             IPPROTO_TCP
         }, 
         {
-            1, 
+            MODIFY, 
             {
                 {ntohl(0xC0A81101), htons(8000)},
                 {ntohl(0xC0A80581)}
